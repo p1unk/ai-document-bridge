@@ -14,9 +14,12 @@ description: >
   be able to better get logos and hand writing. but i also made it to where if your local ai
   fails, crashes, or just your system in general is offline, it will still send it to Groq to get tags
 
-gallery: Add links to 1-2 screenshots of your dashboard.
+gallery:
+  - https://github.com/p1unk/ai-document-bridge/blob/main/Screenshot%201.png?raw=true
+  - https://github.com/p1unk/ai-document-bridge/blob/main/Screenshot%202.png?raw=true
+  - https://github.com/p1unk/ai-document-bridge/blob/main/Screenshot%203.png?raw=true
 
-release_notes: "Initial release of p1unknown AI Bridge."
+release_notes: "Initial release of p1unk AI Bridge."
 
 support: https://github.com/p1unk/ai-document-bridge/issues.
 developer: p1Unk
