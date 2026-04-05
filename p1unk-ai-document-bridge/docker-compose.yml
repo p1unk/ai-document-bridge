@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  ai-bridge:
+  ai-document-bridge:
     image: p1unknown/ai-bridge:latest
     container_name: "ai-document-bridge"
     ports:
