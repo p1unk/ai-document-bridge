@@ -1,12 +1,14 @@
-version: '3.8'
+version: "3.9"
 services:
-  ai-document-bridge:
+  ai-bridge:
     image: p1unknown/ai-bridge:latest
-    container_name: ai-document-bridge
+    container_name: ai-bridge
     ports:
       - "8000:8000"
-    volumes:
-      - ./data:/app/data
     restart: unless-stopped
+    network_mode: host
+    # This tells FastAPI to look in main.py for the 'app' variable
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
