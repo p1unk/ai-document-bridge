@@ -1,0 +1,30 @@
+id: ai-document-bridge
+name: AI Document Bridge
+version: "1.0.0"
+tagline: Automated AI categorization for Paperless-ngx
+description: >
+  A FastAPI-based bridge that connects Paperless-ngx to local AI (Ollama) or 
+  Groq Cloud. It automatically extracts vendors, dates, and amounts to update 
+  your document metadata.
+
+	This is a work in progress. Mainly work on it during weekends when im off work and school.
+  any suggestions are welcome.
+	
+	This was made with paperless-ai in mind, i wanted something that would use a visual ai to 
+  be able to better get logos and hand writing. but i also made it to where if your local ai
+  fails, crashes, or just your system in general is offline, it will still send it to Groq to get tags
+
+gallery: Add links to 1-2 screenshots of your dashboard.
+
+release_notes: "Initial release of p1unknown AI Bridge."
+
+support: https://github.com/p1unk/ai-document-bridge/issues.
+developer: p1Unk
+website: https://github.com/p1unk/ai-document-bridge
+submitter: p1unk
+submission_date: 2026-04-05
+icon: https://raw.githubusercontent.com/p1unk/ai-document-bridge/main/icon.png
+port: 8000
+path: ""
+defaultUsername: "admin"
+default_password: "password123"
