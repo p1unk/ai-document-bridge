@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Bridge - Settings</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+    <style>
+        body { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .nav { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .error { color: #ff5555; background: #2a1b1b; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+        textarea { font-family: monospace; height: 100px; }
+        .hint { font-size: 0.85rem; color: #888; margin-bottom: 10px; display: block; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <h1>⚙️ Bridge Settings</h1>
+        <a href="/dashboard">Back to Dashboard</a>
+    </div>
+
+    {% if error %}
+    <div class="error">
+        <strong>⚠️ Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="/settings" method="post">
+        <fieldset>
+            <legend>Admin Access</legend>
+            <label>Dashboard Username</label>
+            <input type="text" name="admin_user" value="{{ config.admin_user }}" required>
+
+            <label>Dashboard Password</label>
+            <input type="password" name="admin_pass" value="{{ config.admin_pass }}" required>
+        </fieldset>
+
+        <fieldset>
+            <legend>Connection & AI</legend>
+            
+            <label>Paperless-ngx Instance (Internal Name or IP)</label>
+            <span class="hint">Use <strong>paperless-ngx</strong> if running as an Umbrel App.</span>
+            <input type="text" name="umbrel_ip" value="{{ config.umbrel_ip }}" required>
+
+            <label>Paperless API Token</label>
+            <input type="password" name="paperless_token" value="{{ config.paperless_token }}" placeholder="Paste your token here">
+
+            <label>Groq API Key (Cloud Fallback)</label>
+            <input type="password" name="groq_key" value="{{ config.groq_key }}" placeholder="gsk_...">
+
+            <label>Ollama Host (Internal Name or IP)</label>
+            <span class="hint">Use <strong>http://ollama:11434</strong> for the Umbrel Ollama App.</span>
+            <input type="text" name="ollama_host" value="{{ config.ollama_host }}" required>
+        </fieldset>
+
+        <fieldset>
+            <legend>Automation Logic</legend>
+            <label>Tag Mapping (JSON Format)</label>
+            <span class="hint">Map AI 'document_type' to Paperless Tag IDs.</span>
+            <textarea name="tag_map" required>{{ config.tag_map | tojson(indent=4) }}</textarea>
+        </fieldset>
+
+        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <label><strong>Confirm Current Password to Save Changes</strong></label>
+            <input type="password" name="current_password" required placeholder="Verify current admin password">
+            <button type="submit" style="width: 100%; margin-top: 10px;">💾 Save & Update Config</button>
+        </div>
+    </form>
+
+    <p style="text-align: center; margin-top: 40px; font-size: 0.8rem; color: #555;">
+        AI Bridge v1.0.0 by p1unknown
+    </p>
+</body>
+</html>

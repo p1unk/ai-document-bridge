@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  ai-bridge:
+    build: .
+    container_name: ai-bridge
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.json:/app/config.json
+      - ./history.json:/app/history.json
+    restart: unless-stopped
+    # This allows the container to talk to the Umbrel host easily
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+# This is main docker-compose file.
