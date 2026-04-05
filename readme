@@ -1,4 +1,4 @@
-# ![AI Bridge Logo](Icon.png)
+![AI Bridge Logo](Icon.png)
 📑 AI Document Bridge for Paperless-ngx
 AI Document Bridge is a lightweight FastAPI-based middleware that connects your Paperless-ngx instance to powerful AI models. It automatically analyzes your uploaded documents to extract Vendors, Dates, and Amounts, then updates your Paperless metadata and tags instantly.
 
