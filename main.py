@@ -67,14 +67,39 @@ async def root():
 async def login_page(request: Request):
     return """
     <html>
-        <head><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"></head>
-        <body style="display:flex; justify-content:center; align-items:center; height:100vh;">
+        <head>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+            <style>
+                body.dark { background: #10121a; color: #e5e9f0; }
+                body.dark form { background: #1b2232; border: 1px solid #32406b; }
+                body.dark input, body.dark button { background: #1d2738; color: #e5e9f0; border-color: #32406b; }
+                body.dark label { color: #c9d1e8; }
+                body.dark a { color: #95c5ff; }
+                .theme-toggle { position: absolute; right: 20px; top: 20px; padding: 8px 12px; border: 1px solid #888; border-radius: 6px; background: transparent; cursor: pointer; }
+            </style>
+        </head>
+        <body style="display:flex; justify-content:center; align-items:center; height:100vh; position:relative;">
+            <button id="themeToggle" class="theme-toggle" type="button">Switch to Dark Mode</button>
             <form action="/login" method="post" style="width:300px;">
                 <h2 style="text-align:center;">🔐 AI Bridge Login</h2>
                 <label>Username</label><input type="text" name="username" required>
                 <label>Password</label><input type="password" name="password" required>
                 <button type="submit" style="width:100%;">Login</button>
             </form>
+            <script>
+                const themeToggle = document.getElementById('themeToggle');
+                const setTheme = theme => {
+                    document.body.classList.toggle('dark', theme === 'dark');
+                    themeToggle.textContent = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+                };
+                const savedTheme = localStorage.getItem('ai_bridge_theme') || 'light';
+                setTheme(savedTheme);
+                themeToggle?.addEventListener('click', () => {
+                    const nextTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
+                    localStorage.setItem('ai_bridge_theme', nextTheme);
+                    setTheme(nextTheme);
+                });
+            </script>
         </body>
     </html>
     """
@@ -114,32 +139,10 @@ async def dashboard(request: Request):
     except Exception as e:
         print(f"Fetch Error: {e}", flush=True)
 
-    options = "".join([f"<option value='{d['id']}'>{d['title']} (ID: {d['id']})</option>" for d in all_docs])
-    rows = "".join([f"<tr><td>{i['doc_id']}</td><td>{i.get('vendor', 'N/A')}</td><td>{i.get('amount', '0.00')}</td><td>{i.get('method', 'Cloud')}</td></tr>" for i in history])
-
-    return f"""
-    <html>
-        <head><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"></head>
-        <body>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h1>📊 AI Activity</h1>
-                <nav><a href="/settings">Settings</a> | <a href="/logout">Logout</a></nav>
-            </div>
-            <h3>🚀 Manual Analyze</h3>
-            <form action="/analyze-manual" method="post" style="display:flex; gap:10px; align-items: flex-end;">
-                <div style="flex-grow:1;">
-                    <select name="doc_id">{options or "<option>No documents found</option>"}</select>
-                </div>
-                <button type="submit">Analyze</button>
-            </form>
-            <hr>
-            <table>
-                <thead><tr><th>ID</th><th>Vendor</th><th>Amount</th><th>Method</th></tr></thead>
-                <tbody>{rows or "<tr><td colspan='4'>Waiting for first document...</td></tr>"}</tbody>
-            </table>
-        </body>
-    </html>
-    """
+    return templates.TemplateResponse(
+        name="dashboard.html",
+        context={"request": request, "all_docs": all_docs, "history": history}
+    )
 
 @app.post("/analyze-manual")
 async def analyze_manual(request: Request, doc_id: int = Form(...)):
@@ -151,7 +154,10 @@ async def analyze_manual(request: Request, doc_id: int = Form(...)):
 async def get_settings(request: Request):
     if not request.session.get("user"): return RedirectResponse(url="/login")
     conf = load_config()
-    return templates.TemplateResponse(request=request, name="settings.html", context={"config": conf})
+    success = None
+    if request.query_params.get("success") == "1":
+        success = "Settings saved successfully."
+    return templates.TemplateResponse(request=request, name="settings.html", context={"config": conf, "success": success})
 
 @app.post("/settings")
 async def post_settings(request: Request, current_password: str = Form(...),
@@ -174,9 +180,13 @@ async def post_settings(request: Request, current_password: str = Form(...),
         "paperless_token": paperless_token, "groq_key": groq_key, 
         "tag_map": parsed_tags, "ollama_host": ollama_host
     }
+
+    if new_data == conf:
+        return templates.TemplateResponse(request=request, name="settings.html", context={"config": conf, "success": "No changes were made."})
+
     with open(CONFIG_FILE, "w") as f:
         json.dump(new_data, f, indent=4)
-    return RedirectResponse(url="/settings", status_code=303)
+    return RedirectResponse(url="/settings?success=1", status_code=303)
 
 # --- 4. THE AI ENGINE ---
 @app.post("/analyze/{doc_id}")

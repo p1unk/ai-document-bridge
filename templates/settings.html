@@ -7,17 +7,38 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
     <style>
         body { max-width: 800px; margin: 20px auto; padding: 20px; }
-        .nav { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .nav { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .theme-toggle { padding: 8px 12px; border: 1px solid #888; border-radius: 6px; background: transparent; cursor: pointer; }
         .error { color: #ff5555; background: #2a1b1b; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+        .success { color: #0b6623; background: #e6f4ea; padding: 10px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #a3d9b1; }
         textarea { font-family: monospace; height: 100px; }
         .hint { font-size: 0.85rem; color: #888; margin-bottom: 10px; display: block; }
+
+        body.dark { background: #10121a; color: #e5e9f0; }
+        body.dark a { color: #95c5ff; }
+        body.dark input, body.dark textarea, body.dark select, body.dark button, body.dark .theme-toggle, body.dark fieldset { background: #1b2232; color: #e5e9f0; border-color: #32406b; }
+        body.dark fieldset { border-color: #2f3c63; }
+        body.dark legend { color: #d3d8e5; }
+        body.dark .nav, body.dark .error, body.dark .success, body.dark .hint { background: rgba(30, 35, 50, 0.9); }
+        body.dark .error { background: #4b2323; }
+        body.dark .success { background: #1d3d27; border-color: #366d47; }
+        body.dark .theme-toggle { border-color: #5d7eb9; }
     </style>
 </head>
 <body>
     <div class="nav">
         <h1>⚙️ Bridge Settings</h1>
-        <a href="/dashboard">Back to Dashboard</a>
+        <div>
+            <button id="themeToggle" class="theme-toggle" type="button">Switch to Dark Mode</button>
+            <a href="/dashboard">Back to Dashboard</a>
+        </div>
     </div>
+
+    {% if success %}
+    <div class="success">
+        ✅ {{ success }}
+    </div>
+    {% endif %}
 
     {% if error %}
     <div class="error">
@@ -70,5 +91,24 @@
     <p style="text-align: center; margin-top: 40px; font-size: 0.8rem; color: #555;">
         AI Bridge v1.0.0 by p1unknown
     </p>
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const setTheme = theme => {
+            document.body.classList.toggle('dark', theme === 'dark');
+            if (themeToggle) {
+                themeToggle.textContent = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+            }
+        };
+        const savedTheme = localStorage.getItem('ai_bridge_theme') || 'light';
+        setTheme(savedTheme);
+        themeToggle?.addEventListener('click', () => {
+            const nextTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
+            localStorage.setItem('ai_bridge_theme', nextTheme);
+            setTheme(nextTheme);
+        });
+    </script>
 </body>
 </html>
+
+
+
