@@ -140,6 +140,7 @@ async def dashboard(request: Request):
         print(f"Fetch Error: {e}", flush=True)
 
     return templates.TemplateResponse(
+        request=request,
         name="dashboard.html",
         context={"request": request, "all_docs": all_docs, "history": history}
     )
