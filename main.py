@@ -1,7 +1,12 @@
+from email.mime import image
 import json
 import os
+import sys
+import io
+from click import prompt
 import httpx
 import ollama
+import io
 from fastapi import FastAPI, Request, Form, Body
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -9,6 +14,11 @@ from starlette.middleware.sessions import SessionMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from groq import Groq
 from typing import Optional
+from PIL import Image
+from PIL import ImageEnhance
+from ollama import Client
+
+
 
 app = FastAPI()
 
@@ -36,8 +46,12 @@ def load_config():
         "umbrel_ip": "paperless-ngx", 
         "paperless_token": "",
         "groq_key": "",
+        "groq_model": "",
         "tag_map": {"Receipt": 1, "Invoice": 2},
-        "ollama_host": "http://ollama:11434"
+        "ollama_host": "",
+        "AI_model": "llama3:8b",
+        "AI_vision_model": "llava",
+        "Prompt": "Extract JSON (vendor, date, total_amount, document_type)"
     }
     if not os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "w") as f:
@@ -65,44 +79,7 @@ async def root():
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return """
-    <html>
-        <head>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
-            <style>
-                body.dark { background: #10121a; color: #e5e9f0; }
-                body.dark form { background: #1b2232; border: 1px solid #32406b; }
-                body.dark input, body.dark button { background: #1d2738; color: #e5e9f0; border-color: #32406b; }
-                body.dark label { color: #c9d1e8; }
-                body.dark a { color: #95c5ff; }
-                .theme-toggle { position: absolute; right: 20px; top: 20px; padding: 8px 12px; border: 1px solid #888; border-radius: 6px; background: transparent; cursor: pointer; }
-            </style>
-        </head>
-        <body style="display:flex; justify-content:center; align-items:center; height:100vh; position:relative;">
-            <button id="themeToggle" class="theme-toggle" type="button">Switch to Dark Mode</button>
-            <form action="/login" method="post" style="width:300px;">
-                <h2 style="text-align:center;">🔐 AI Bridge Login</h2>
-                <label>Username</label><input type="text" name="username" required>
-                <label>Password</label><input type="password" name="password" required>
-                <button type="submit" style="width:100%;">Login</button>
-            </form>
-            <script>
-                const themeToggle = document.getElementById('themeToggle');
-                const setTheme = theme => {
-                    document.body.classList.toggle('dark', theme === 'dark');
-                    themeToggle.textContent = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
-                };
-                const savedTheme = localStorage.getItem('ai_bridge_theme') || 'light';
-                setTheme(savedTheme);
-                themeToggle?.addEventListener('click', () => {
-                    const nextTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
-                    localStorage.setItem('ai_bridge_theme', nextTheme);
-                    setTheme(nextTheme);
-                });
-            </script>
-        </body>
-    </html>
-    """
+    return templates.TemplateResponse(request=request, name="login.html")
 
 @app.post("/login")
 async def do_login(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -133,15 +110,16 @@ async def dashboard(request: Request):
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             headers = {"Authorization": f"Token {conf.get('paperless_token')}"}
-            p_url = f"http://{conf['umbrel_ip']}:2349/api/documents/?page_size=15"
+            p_url = f"http://{conf['umbrel_ip']}/api/documents/?page_size=15"
             p_resp = await client.get(p_url, headers=headers)
             all_docs = p_resp.json().get('results', [])
     except Exception as e:
         print(f"Fetch Error: {e}", flush=True)
 
     return templates.TemplateResponse(
+        request,
         name="dashboard.html",
-        context={"request": request, "all_docs": all_docs, "history": history}
+        context={"all_docs": all_docs, "history": history}
     )
 
 @app.post("/analyze-manual")
@@ -163,12 +141,22 @@ async def get_settings(request: Request):
 async def post_settings(request: Request, current_password: str = Form(...),
                         admin_user: str = Form(...), admin_pass: str = Form(...),
                         umbrel_ip: str = Form(...), paperless_token: str = Form(...),
-                        groq_key: str = Form(...), tag_map: str = Form(...),
-                        ollama_host: str = Form(...)):
+                        groq_key: str = Form(default=""), groq_model: str = Form(default=""), tag_map: str = Form(...),
+                        ollama_host: str = Form(...), AI_model: str = Form(...),
+                        AI_vision_model: str = Form(...), Prompt: str = Form(...)):
     if not request.session.get("user"): return RedirectResponse(url="/login")
     conf = load_config()
     if current_password != conf.get("admin_pass"):
         return templates.TemplateResponse(request=request, name="settings.html", context={"config": conf, "error": "Invalid password."})
+    
+    if not AI_model.strip() or len(AI_model) > 100:
+        return templates.TemplateResponse(request=request, name="settings.html", context={"config": conf, "error": "AI Model must be non-empty and less than 100 characters."})
+    
+    if not AI_vision_model.strip() or len(AI_vision_model) > 100:
+        return templates.TemplateResponse(request=request, name="settings.html", context={"config": conf, "error": "AI Vision Model must be non-empty and less than 100 characters."})
+    
+    if not Prompt.strip() or len(Prompt) > 2000:
+        return templates.TemplateResponse(request=request, name="settings.html", context={"config": conf, "error": "Prompt must be non-empty and less than 2000 characters."})
     
     try:
         parsed_tags = json.loads(tag_map)
@@ -177,8 +165,9 @@ async def post_settings(request: Request, current_password: str = Form(...),
 
     new_data = {
         "admin_user": admin_user, "admin_pass": admin_pass, "umbrel_ip": umbrel_ip,
-        "paperless_token": paperless_token, "groq_key": groq_key, 
-        "tag_map": parsed_tags, "ollama_host": ollama_host
+        "paperless_token": paperless_token, "groq_key": groq_key, "groq_model": groq_model,
+        "tag_map": parsed_tags, "ollama_host": ollama_host,
+        "AI_model": AI_model, "AI_vision_model": AI_vision_model, "Prompt": Prompt
     }
 
     if new_data == conf:
@@ -201,7 +190,7 @@ async def analyze_document(doc_id: Optional[int] = None, payload: dict = Body(No
 
     print(f"START: Processing Doc {doc_id}", flush=True)
     conf = load_config()
-    p_url = f"http://{conf['umbrel_ip']}:2349"
+    p_url = f"http://{conf['umbrel_ip']}"
     headers = {"Authorization": f"Token {conf['paperless_token']}", "Content-Type": "application/json"}
     
     async with httpx.AsyncClient(timeout=120.0) as client:
@@ -210,22 +199,81 @@ async def analyze_document(doc_id: Optional[int] = None, payload: dict = Body(No
             doc_data = doc_resp.json()
             
             ai_data, method = {}, "None"
+
+            local_client = Client(host=conf['ollama_host'], timeout=1200.0)
             # Attempt Local Vision
             try:
-                img = await client.get(f"{p_url}/api/documents/{doc_id}/thumb/", headers=headers)
-                res = ollama.generate(model='llama3.2-vision', 
-                                      prompt="Return JSON only: vendor, date (YYYY-MM-DD), total_amount, document_type.",
-                                      images=[img.content], format='json', host=conf['ollama_host'])
-                ai_data, method = json.loads(res['response']), "Local Vision"
+                print(">>> Step 1: Requesting image from server...", flush=True)
+                ocr_text = doc_data.get('content', '').strip()
+                is_ocr_useful = len(ocr_text) > 200 and any(x in ocr_text.lower() for x in ['total', 'amount', 'balance', 'sum'] )
+                #print(f"DEBUG: OCR Text content: {ocr_text[:2000]}...", flush=True)
+                if ocr_text:
+                    print(f">>> OCR text found, using text. ({len(ocr_text)} chars)", flush=True)
+                    res = local_client.generate(
+                        model=conf['AI_model'], 
+                        prompt=f"{conf['Prompt']}\n\nText:\n{ocr_text[:2000]}",
+                        format='json', 
+                        options={'temperature': 0.0}
+                    )
+                    method = "Local OCR"
+                else:
+                    print(">>> OCR looks incomplete or missing. Forcing Vision scan...", flush=True)
+                    img_res = await client.get(f"{p_url}/api/documents/{doc_id}/thumb/", headers=headers)
+                    image = Image.open(io.BytesIO(img_res.content))
+                    image.thumbnail((750, 750))
+                    image = ImageEnhance.Contrast(image).enhance(1.5)
+
+                    img_byte_arr = io.BytesIO()
+                    image.save(img_byte_arr, format='JPEG', quality=85)
+                    optimized_img = img_byte_arr.getvalue()
+
+
+                    print(">>> Step 2: Optimizing image...", flush=True)
+                    image = Image.open(io.BytesIO(img_res.content))
+                    image.thumbnail((750, 750))
+                    image = ImageEnhance.Contrast(image).enhance(1.5)
+
+                    img_byte_arr = io.BytesIO()
+                    image.save(img_byte_arr, format='JPEG', quality=85)
+                    optimized_img = img_byte_arr.getvalue()
+                    
+                    print(">>> Step 3: Sending to AI model...", flush=True)
+                    res = local_client.generate(
+                        model=conf['AI_vision_model'], 
+                        prompt=conf['Prompt'],
+                        images=[optimized_img],
+                        format='json', 
+                        options={'temperature': 0.0}
+                    )
+                    method = "Local Vision"
+
+                #print(f"DEBUG: AI Output: {res['response']}", flush=True)
+                ai_data, method = json.loads(res['response']), "Local OCR"
+
+                raw_total = ai_data.get('total') or ai_data.get('amount') or ai_data.get('grand_total') or 0.0
+                if isinstance(raw_total, str):
+                    import re
+                    cleaned = re.sub(r'[^\d\.\-]', '', raw_total)
+                    ai_data['total'] = float(cleaned) if cleaned else 0.0
+                else:
+                    ai_data['total'] = float(raw_total)
+           
             except Exception as e:
-                print(f"Falling back to Groq: {e}", flush=True)
-                g_client = Groq(api_key=conf['groq_key'])
-                completion = g_client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    response_format={"type": "json_object"},
-                    messages=[{"role": "user", "content": f"Extract JSON (vendor, date, total_amount, document_type) from: {doc_data.get('content', '')[:3000]}"}]
-                )
-                ai_data, method = json.loads(completion.choices[0].message.content), "Groq Cloud"
+                print(f"!!! LOCAL AI CRASHED at Step {method}: {e}", flush=True)
+                if conf.get('groq_key') and conf.get('groq_model'):
+                    print(f"Falling back to Groq: {e}", flush=True)
+                    g_client = Groq(api_key=conf['groq_key'])
+                    completion = g_client.chat.completions.create(
+                        model=conf['groq_model'],
+                        response_format={"type": "json_object"},
+                        messages=[{"role": "user", "content": f"{conf['Prompt']}: {doc_data.get('content', '')[:3000]}"}]
+                    )
+                    ai_data, method = json.loads(completion.choices[0].message.content), "Groq Cloud"
+                else:
+                    print("No Groq fallback configured, raising error", flush=True)
+                    raise e
+
+            print(f"SUCCESS: Handled via {method}. Total: {ai_data.get('total')}, Vendor: {ai_data.get('vendor')}, Date: {ai_data.get('date')}", flush=True)
 
             # Apply updates
             tag_id = conf['tag_map'].get(ai_data.get('document_type'), 1)
@@ -235,7 +283,7 @@ async def analyze_document(doc_id: Optional[int] = None, payload: dict = Body(No
             add_to_history({
                 "doc_id": doc_id, 
                 "vendor": ai_data.get('vendor'), 
-                "amount": ai_data.get('total_amount'), 
+                "amount": ai_data.get('total'), 
                 "method": method
             })
             

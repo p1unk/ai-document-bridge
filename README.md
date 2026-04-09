@@ -3,7 +3,7 @@
 AI Document Bridge is a lightweight FastAPI-based middleware that connects your Paperless-ngx instance to powerful AI models. It automatically analyzes your uploaded documents to extract Vendors, Dates, and Amounts, then updates your Paperless metadata and tags instantly.
 
 🚀 Features
-Dual-AI Support: Uses local Llama 3.2-vision (via Ollama) or falls back to Groq Cloud for high-speed processing.
+Dual-AI Support: Uses local AI (via Ollama) or falls back to Groq Cloud for high-speed processing.
 
 Automatic Tagging: Maps document types (Receipt/Invoice) to your existing Paperless tags.
 

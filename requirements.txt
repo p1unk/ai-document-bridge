@@ -5,3 +5,4 @@ httpx
 ollama
 groq
 python-multipart
+pillow

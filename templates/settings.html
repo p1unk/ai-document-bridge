@@ -11,7 +11,8 @@
         .theme-toggle { padding: 8px 12px; border: 1px solid #888; border-radius: 6px; background: transparent; cursor: pointer; }
         .error { color: #ff5555; background: #2a1b1b; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
         .success { color: #0b6623; background: #e6f4ea; padding: 10px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #a3d9b1; }
-        textarea { font-family: monospace; height: 100px; }
+        input[type="text"], input[type="password"] { width: 100%; box-sizing: border-box; }
+        textarea { font-family: monospace; height: 100px; width: 100%; box-sizing: border-box; }
         .hint { font-size: 0.85rem; color: #888; margin-bottom: 10px; display: block; }
 
         body.dark { background: #10121a; color: #e5e9f0; }
@@ -57,7 +58,7 @@
         </fieldset>
 
         <fieldset>
-            <legend>Connection & AI</legend>
+            <legend>Connection</legend>
             
             <label>Paperless-ngx Instance (Internal Name or IP)</label>
             <span class="hint">Use <strong>paperless-ngx</strong> if running as an Umbrel App.</span>
@@ -66,12 +67,37 @@
             <label>Paperless API Token</label>
             <input type="password" name="paperless_token" value="{{ config.paperless_token }}" placeholder="Paste your token here">
 
-            <label>Groq API Key (Cloud Fallback)</label>
-            <input type="password" name="groq_key" value="{{ config.groq_key }}" placeholder="gsk_...">
-
             <label>Ollama Host (Internal Name or IP)</label>
             <span class="hint">Use <strong>http://ollama:11434</strong> for the Umbrel Ollama App.</span>
             <input type="text" name="ollama_host" value="{{ config.ollama_host }}" required>
+        </fieldset>
+
+        <fieldset>
+            <legend>Fallback AI</legend>
+            
+            <label>Fallback Model (Optional)</label>
+            <span class="hint">Specify the Groq model to use for cloud fallback. Leave empty to disable cloud fallback.</span>
+            <input type="text" name="groq_model" value="{{ config.groq_model }}" placeholder="e.g., llama-3.3-70b-versatile">
+            
+            <label>Groq API Key (Optional)</label>
+            <span class="hint">This key is used only for cloud fallback when local Ollama processing fails. Both model and key must be provided.</span>
+            <input type="password" name="groq_key" value="{{ config.groq_key }}" placeholder="gsk_...">
+        </fieldset>
+
+        <fieldset>
+            <legend>OCR AI Model & Prompt Configuration</legend>
+            
+            <label>AI Model for OCR</label>
+            <span class="hint">Specify the model for OCR analysis.</span>
+            <input type="text" name="AI_model" value="{{ config.AI_model }}" placeholder="e.g., llama3.2-vision" required>
+
+            <label>AI Vision Model</label>
+            <span class="hint">Specify the vision model for image processing.</span>
+            <input type="text" name="AI_vision_model" value="{{ config.AI_vision_model }}" placeholder="e.g., llava" required>
+            
+            <label>Custom Prompt for Document Analysis</label>
+            <span class="hint">Include fields you want extracted (vendor, date, total_amount, document_type, etc.)</span>
+            <textarea name="Prompt" required>{{ config.Prompt }}</textarea>
         </fieldset>
 
         <fieldset>
@@ -89,7 +115,7 @@
     </form>
 
     <p style="text-align: center; margin-top: 40px; font-size: 0.8rem; color: #555;">
-        AI Bridge v1.0.0 by p1unknown
+        AI Bridge v1.0.5 by p1unknown
     </p>
     <script>
         const themeToggle = document.getElementById('themeToggle');
