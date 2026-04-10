@@ -2,6 +2,10 @@ FROM python:3.11-bookworm
 
 WORKDIR /app
 
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Install dependencies
 RUN pip install --no-cache-dir fastapi uvicorn httpx ollama groq python-multipart itsdangerous jinja2
 

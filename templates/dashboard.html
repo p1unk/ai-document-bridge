@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Bridge - Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <style>
         body { max-width: 1000px; margin: 20px auto; padding: 20px; }
         .nav { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -32,8 +33,10 @@
         </div>
     </div>
 
+    <div id="progress"></div>
+
     <h3>🚀 Manual Analyze</h3>
-    <form action="/analyze-manual" method="post" style="display:flex; gap:10px; align-items: flex-end;">
+    <form hx-post="/analyze-manual" hx-target="#progress" hx-swap="innerHTML" style="display:flex; gap:10px; align-items: flex-end;">
         <div style="flex-grow:1;">
             <select name="doc_id">
                 {% if all_docs %}

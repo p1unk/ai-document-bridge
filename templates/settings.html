@@ -97,7 +97,7 @@
             
             <label>Custom Prompt for Document Analysis</label>
             <span class="hint">Include fields you want extracted (vendor, date, total_amount, document_type, etc.)</span>
-            <textarea name="Prompt" required>{{ config.Prompt }}</textarea>
+            <textarea name="Prompt" required placeholder="Extract the total (eg. 'Total', 'Amount', 'subtotal' or 'USD'), vendor, document type (eg. Invoice, Receipt, Other) and date. Return ONLY JSON. no explanations.">{{ config.Prompt }}</textarea>
         </fieldset>
 
         <fieldset>
